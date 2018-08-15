@@ -1,6 +1,5 @@
 package lv.ctco.javaschool.game.control;
 
-import com.sun.tools.javac.util.List;
 import lv.ctco.javaschool.auth.entity.domain.User;
 import lv.ctco.javaschool.game.entity.Cell;
 import lv.ctco.javaschool.game.entity.CellState;
@@ -10,6 +9,7 @@ import lv.ctco.javaschool.game.entity.GameStatus;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import java.util.List;
 import java.util.Optional;
 
 @Stateless
@@ -42,6 +42,19 @@ public class GameStore {
     }
 
 
+    public Optional<Game> getOpenGameFor(User user) {
+        return em.createQuery(
+                "select g " +
+                        "from Game g " +
+                        "where g.status <> :status " +
+                        "  and (g.player1 = :user " +
+                        "   or g.player2 = :user)", Game.class)
+                .setParameter("status", GameStatus.FINISHED)
+                .setParameter("user", user)
+                .getResultStream()
+                .findFirst();
+    }
+
     public void setCellState(Game game, User player, String address, boolean targetArea, CellState state) {
         Optional<Cell> cell = em.createQuery(
                 "select c from Cell c " +
@@ -68,4 +81,30 @@ public class GameStore {
         }
     }
 
+    public void setShips(Game game, User player, boolean targetArea, List<String> ships) {
+        clearField(game, player, targetArea);
+        ships.stream()
+                .map(addr -> {
+                    Cell c = new Cell();
+                    c.setGame(game);
+                    c.setAddress(addr);
+                    c.setTargetArea(targetArea);
+                    c.setUser(player);
+                    c.setState(CellState.SHIP);
+                    return c;
+                }).forEach(c -> em.persist(c));
+    }
+    private void clearField(Game game, User player, boolean targetArea) {
+        List<Cell> cells = em.createQuery(
+                "select c " +
+                        "from Cell c " +
+                        "where c.game = :game " +
+                        "  and c.user = :user " +
+                        "  and c.targetArea = :target", Cell.class)
+                .setParameter("game", game)
+                .setParameter("user", player)
+                .setParameter("target", targetArea)
+                .getResultList();
+        cells.forEach(c -> em.remove(c));
+    }
 }

@@ -22,6 +22,7 @@ public class Cell {
     private User user;
 
     @Column(name = "is_target_area")
+
     private boolean targetArea;
 
     private String address;
