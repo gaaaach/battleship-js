@@ -55,8 +55,8 @@ public class GameStore {
                 .findFirst();
     }
 
-    public void setCellState(Game game, User player, String address, boolean targetArea, CellState state) {
-        Optional<Cell> cell = em.createQuery(
+    public Optional<Cell> findCell(Game game, User player, String address, boolean targetArea) {
+        return em.createQuery(
                 "select c from Cell c " +
                         "where c.game = :game " +
                         "  and c.user = :user " +
@@ -68,6 +68,9 @@ public class GameStore {
                 .setParameter("address", address)
                 .getResultStream()
                 .findFirst();
+    }
+    public void setCellState(Game game, User player, String address, boolean targetArea, CellState state) {
+        Optional<Cell> cell = findCell(game, player, address, targetArea);
         if (cell.isPresent()) {
             cell.get().setState(state);
         } else {
@@ -78,6 +81,17 @@ public class GameStore {
             newCell.setTargetArea(targetArea);
             newCell.setState(state);
             em.persist(newCell);
+        }
+    }
+
+    public boolean isWin(Game game, User player){
+
+        List<Cell> cells = getCells(game, player);
+        if(cells.contains(CellState.SHIP)){
+            return false;
+        }
+        else{
+            return true;
         }
     }
 
@@ -94,6 +108,18 @@ public class GameStore {
                     return c;
                 }).forEach(c -> em.persist(c));
     }
+
+    public List<Cell> getCells(Game game, User player) {
+        return em.createQuery(
+                "select c " +
+                        "from Cell c " +
+                        "where c.game = :game " +
+                        "  and c.user = :user ", Cell.class)
+                .setParameter("game", game)
+                .setParameter("user", player)
+                .getResultList();
+    }
+
     private void clearField(Game game, User player, boolean targetArea) {
         List<Cell> cells = em.createQuery(
                 "select c " +
