@@ -9,6 +9,7 @@ import lv.ctco.javaschool.game.entity.GameStatus;
 import javax.ejb.Stateless;
 import javax.persistence.EntityManager;
 import javax.persistence.PersistenceContext;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Optional;
 
@@ -84,15 +85,17 @@ public class GameStore {
         }
     }
 
-    public boolean isWin(Game game, User player){
-
-        List<Cell> cells = getCells(game, player);
-        if(cells.contains(CellState.SHIP)){
-            return false;
-        }
-        else{
-            return true;
-        }
+    public Optional<Game> getLatestGame(User user) {
+        return em.createQuery(
+                "select g " +
+                        "from Game g " +
+                        "where g.player1 = :user " +
+                        "   or g.player2 = :user " +
+                        "order by g.id desc", Game.class)
+                .setParameter("user", user)
+                .setMaxResults(1)
+                .getResultStream()
+                .findFirst();
     }
 
     public void setShips(Game game, User player, boolean targetArea, List<String> ships) {
@@ -132,5 +135,16 @@ public class GameStore {
                 .setParameter("target", targetArea)
                 .getResultList();
         cells.forEach(c -> em.remove(c));
+    }
+
+    public int winMoves (Game game, User player) {
+         return em.createQuery("select c from Cell c where c.game =:game"+
+                " and c.user = :user and (c.state=:hit or c.state=:miss) and c.targetArea=false", Cell.class)
+                .setParameter("game", game)
+                .setParameter("user", player)
+                .setParameter("hit", CellState.HIT)
+                .setParameter("miss", CellState.MISS)
+                .getResultList()
+                .size();
     }
 }

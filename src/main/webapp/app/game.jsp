@@ -94,7 +94,10 @@
                 window.setTimeout(function () {
                     checkStatus();
                 }, 1000);
-            } else {
+            } else if (game.status === "FINISHED") {
+                location.href = "<c:url value='/app/result.jsp'/>";
+                return;
+            }else {
                 return;
             }
             drawShips();
@@ -116,10 +119,6 @@
                 var id = (c.targetArea ? "t" : "m") + c.address;
                 var tblCell = document.getElementById(id);
                 tblCell.className = c.state;
-//                parsedJson = JSON.parse(stringifiedJson);
-//                if(typeof parsedJson["SHIP"].state !== 'SHIP') {
-//                   console.log("WIN!");
-//                }
             });
         });
     }

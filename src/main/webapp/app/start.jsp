@@ -7,7 +7,7 @@
 <body>
 <button type="button" onclick="logout()">Log out</button>
 <button type="button" onclick="startGame()">Start Game</button>
-
+<button type="button" onclick="highScore()">Highscore</button>
 <script>
     function logout() {
         fetch("<c:url value='/api/auth/logout'/>", {"method": "POST"})
@@ -20,6 +20,12 @@
         fetch("<c:url value='/api/game'/>", {"method": "POST"})
             .then(function (response) {
                 location.href = "/app/placement.jsp";
+            });
+    }
+    function highScore(){
+        fetch("<c:url value='/api/game'/>", {"method": "POST"})
+            .then(function (response) {
+                location.href = "/app/highscore.jsp";
             });
     }
 </script>

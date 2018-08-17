@@ -60,6 +60,17 @@ public class GameApi {
     @POST
     @RolesAllowed({"ADMIN", "USER"})
     @Path("/cells")
+    public void setHighScore(JsonObject field) {
+        User currentUser = userStore.getCurrentUser();
+        Optional<Game> game = gameStore.getStartedGameFor(currentUser, GameStatus.PLACEMENT);
+
+    }
+
+
+
+    @POST
+    @RolesAllowed({"ADMIN", "USER"})
+    @Path("/cells")
     public void setShips(JsonObject field) {
         User currentUser = userStore.getCurrentUser();
         Optional<Game> game = gameStore.getStartedGameFor(currentUser, GameStatus.PLACEMENT);
@@ -92,7 +103,7 @@ public class GameApi {
     @Path("/status")
     public GameDto getGameStatus() {
         User currentUser = userStore.getCurrentUser();
-        Optional<Game> game = gameStore.getOpenGameFor(currentUser);
+        Optional<Game> game = gameStore.getLatestGame(currentUser);
         return game.map(g -> {
             GameDto dto = new GameDto();
             dto.setStatus(g.getStatus());
@@ -136,6 +147,7 @@ public class GameApi {
                 if (c.getState() == CellState.SHIP) {
                     c.setState(CellState.HIT);
                     gameStore.setCellState(g, currentUser, address, true, CellState.HIT);
+                    checkFinishState(g, oppositeUser);
                     return;
                 } else if (c.getState() == CellState.EMPTY) {
                     c.setState(CellState.MISS);
@@ -144,16 +156,30 @@ public class GameApi {
                 gameStore.setCellState(g, oppositeUser, address, false, CellState.MISS);
                 gameStore.setCellState(g, currentUser, address, true, CellState.MISS);
             }
-            if(gameStore.isWin(g, currentUser)){
-                System.out.print("WIN");
-            }
-            else{
-                System.out.print("NAV WIN");
-            }
-
             boolean p1a = g.isPlayer1Active();
             g.setPlayer1Active(!p1a);
             g.setPlayer2Active(p1a);
         });
     }
+    private void saveScore(Game game, User player){
+        int score = gameStore.winMoves(game, player);
+        System.out.println(score);
+        TopTen topTen = new TopTen();
+        topTen.setPlayer(player);
+        topTen.setScore(score);
+        em.persist(topTen);
+    }
+
+    private void checkFinishState(Game game, User player) {
+        boolean hasShips = gameStore.getCells(game, player)
+                .stream()
+                .filter(c -> !c.isTargetArea())
+                .anyMatch(c -> c.getState() == CellState.SHIP);
+        if (!hasShips) {
+            game.setStatus(GameStatus.FINISHED);
+            saveScore(game, player);
+        }
+    }
+
+
 }
